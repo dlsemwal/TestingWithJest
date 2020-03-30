@@ -144,3 +144,122 @@ describe("Practice tests", () => {
     });
   });
 });
+
+describe("Testing with mock function", () => {
+  function forEach(items, callback) {
+    for (let index = 0; index < items.length; index++) {
+      callback(items[index]);
+    }
+  }
+
+  it("should test with mock function", () => {
+    const mockCallback = jest.fn(x => 42 + x);
+    forEach([0, 1], mockCallback);
+
+    // The mock function will be called twice
+    expect(mockCallback.mock.calls.length).toBe(2);
+
+    // 0 was the first argument of the first call to the function
+    expect(mockCallback.mock.calls[0][0]).toBe(0);
+
+    // 1 was the first argument of the second call to the function
+    expect(mockCallback.mock.calls[1][0]).toBe(1);
+
+    // 42 was the return value of the first call to the function
+    expect(mockCallback.mock.results[0].value).toBe(42);
+  });
+
+  it("testing of mock function returning different values on every call", () => {
+    const myMock = jest.fn();
+    console.log(myMock());
+    // > undefined
+
+    myMock
+      .mockReturnValueOnce(10)
+      .mockReturnValueOnce("x")
+      .mockReturnValue(true);
+
+    console.log(myMock(), myMock(), myMock(), myMock());
+    // > 10, 'x', true, true
+  });
+});
+
+describe("mock modules", () => {
+  jest.mock("../index"); // this happens automatically with automocking
+  const mockIndex = require("../index");
+
+  it("mocking of modules", () => {
+    mockIndex.mockImplementation(() => 42);
+    mockIndex();
+    // > 42
+  });
+
+  it("mock module different implementation multiple time", () => {
+    const myMockFn = jest
+      .fn()
+      .mockImplementationOnce(cb => cb(null, true))
+      .mockImplementationOnce(cb => cb(null, false));
+
+    myMockFn((err, val) => console.log(val));
+    // > true
+
+    myMockFn((err, val) => console.log(val));
+    // > false
+
+    // another method of implementation
+    const myMockFn2 = jest
+      .fn(() => "default")
+      .mockImplementationOnce(() => "first call")
+      .mockImplementationOnce(() => "second call");
+
+    console.log(myMockFn2(), myMockFn2(), myMockFn2(), myMockFn2());
+    // > 'first call', 'second call', 'default', 'default'
+  });
+
+  it("mocking of object in object", () => {
+    const myObj = {
+      myMethod: jest.fn().mockReturnThis()
+    };
+
+    // is the same as
+
+    const otherObj = {
+      myMethod: jest.fn(function() {
+        return this;
+      })
+    };
+  });
+
+  it("testing with custom matchers", () => {
+    const mockFunc = jest
+      .fn()
+      .mockReturnValue("default")
+      .mockImplementation(scalar => 42 + scalar)
+      .mockName("add42");
+
+    [1, 2, 3, 4].forEach(v => {
+      mockFunc();
+    });
+
+    // if the mock function was called at least once
+    expect(mockFunc.mock.calls.length).toBeGreaterThan(0);
+
+    // If the mock function was called at least once with the specified args
+    expect(mockFunc.mock.calls).toContainEqual([arg1, arg2]);
+
+    // If the last call to the mock function was called with the specified args
+    expect(mockFunc.mock.calls[mockFunc.mock.calls.length - 1]).toEqual([
+      arg1,
+      arg2
+    ]);
+
+    // If the first arg of the last call to the mock function was `42`
+    // (note that there are no sugar helpers for this specific of an assertion)
+    expect(mockFunc.mock.calls[mockFunc.mock.calls.length - 1][0]).toBe(42);
+
+    // If a snapshot will check that a mock was invoked the same number of times,
+    // and in the same order, with the same arguments. It will also assert on the name.
+    expect(mockFunc.mock.calls).toEqual([[arg1, arg2]]);
+    expect(mockFunc.getMockName()).toBe("a mock name");
+  });
+});
